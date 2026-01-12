@@ -85,6 +85,12 @@ To load the driver automatically at boot, create a modules-load config:
 echo "ehub" | sudo tee /etc/modules-load.d/ehub.conf
 ```
 
+Additionally, create a udev rule to ensure the driver loads when the keyboard dock is connected:
+```bash
+echo 'ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1d5c", ATTR{idProduct}=="6000", RUN+="/sbin/modprobe ehub"' | sudo tee /etc/udev/rules.d/99-fl6000-keyboard.rules
+sudo udevadm control --reload-rules
+```
+
 ### Step 5: Blacklist Conflicting Module (if needed)
 
 If the system has a non-working ehub module, blacklist it:
@@ -101,6 +107,8 @@ Then install your working module as shown above.
 sudo rmmod ehub
 sudo rm /lib/modules/$(uname -r)/kernel/drivers/usb/host/ehub.ko
 sudo rm /etc/modules-load.d/ehub.conf
+sudo rm /etc/udev/rules.d/99-fl6000-keyboard.rules
+sudo udevadm control --reload-rules
 sudo depmod -a
 ```
 
