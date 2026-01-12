@@ -161,9 +161,11 @@ This driver has been modified for Linux kernel 6.x compatibility:
 
 ## License
 
-This driver is based on the original Fresco Logic FL6000 driver and is licensed under GPL v2.
+This driver is licensed under the GNU General Public License v2 (GPL-2.0).
+See the [LICENSE](LICENSE) file for the full license text.
 
 ## Credits
 
-- Original driver: Fresco Logic, Inc. (2014-2017)
-- Kernel 6.x adaptation and fixes: Community contribution
+- Original xHCI driver: Intel Corp. (2008), Author: Sarah Sharp
+- FL6000 driver: Fresco Logic, Inc. (2014-2017)
+- Linux kernel 6.x adaptation and DMA fixes: Community contribution
