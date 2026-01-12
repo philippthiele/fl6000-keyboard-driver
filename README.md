@@ -168,4 +168,4 @@ See the [LICENSE](LICENSE) file for the full license text.
 
 - Original xHCI driver: Intel Corp. (2008), Author: Sarah Sharp
 - FL6000 driver: Fresco Logic, Inc. (2014-2017)
-- Linux kernel 6.x adaptation and DMA fixes: Community contribution
+- Linux kernel 6.x adaptation and DMA fixes: Philipp Thiele
