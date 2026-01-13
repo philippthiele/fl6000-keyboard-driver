@@ -19,7 +19,7 @@ The FL6000 chip acts as a USB bridge between the tablet and the detachable keybo
 
 ```bash
 sudo apt update
-sudo apt install build-essential linux-headers-$(uname -r)
+sudo apt install build-essential linux-headers-$(uname -r) dkms
 ```
 
 ## Installation
@@ -65,9 +65,39 @@ dmesg | tail -30
 
 You should see messages about USB bus 5 being registered and ITE keyboard/touchpad devices being detected.
 
-### Step 4: Install the Driver (Permanent)
+### Step 4: Install the Driver (DKMS - Recommended)
 
-To make the driver load automatically on boot:
+DKMS (Dynamic Kernel Module Support) automatically rebuilds the driver when you upgrade your kernel. This is the recommended installation method.
+
+```bash
+# Copy the driver source to /usr/src
+sudo cp -r /path/to/fl6000-keyboard-driver /usr/src/ehub-1.0.0
+
+# Register with DKMS
+sudo dkms add -m ehub -v 1.0.0
+
+# Build and install for current kernel
+sudo dkms build -m ehub -v 1.0.0
+sudo dkms install -m ehub -v 1.0.0
+
+# Load the module
+sudo modprobe ehub
+```
+
+To load the driver automatically at boot:
+```bash
+echo "ehub" | sudo tee /etc/modules-load.d/ehub.conf
+```
+
+Create a udev rule to ensure the driver loads when the keyboard dock is connected:
+```bash
+echo 'ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1d5c", ATTR{idProduct}=="6000", RUN+="/sbin/modprobe ehub"' | sudo tee /etc/udev/rules.d/99-fl6000-keyboard.rules
+sudo udevadm control --reload-rules
+```
+
+### Step 4 (Alternative): Manual Installation
+
+If you prefer not to use DKMS, you can install manually. Note that you'll need to rebuild and reinstall after each kernel upgrade.
 
 ```bash
 # Copy the module to the kernel modules directory
@@ -78,15 +108,11 @@ sudo depmod -a
 
 # Load the module
 sudo modprobe ehub
-```
 
-To load the driver automatically at boot, create a modules-load config:
-```bash
+# Auto-load at boot
 echo "ehub" | sudo tee /etc/modules-load.d/ehub.conf
-```
 
-Additionally, create a udev rule to ensure the driver loads when the keyboard dock is connected:
-```bash
+# Udev rule for device detection
 echo 'ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1d5c", ATTR{idProduct}=="6000", RUN+="/sbin/modprobe ehub"' | sudo tee /etc/udev/rules.d/99-fl6000-keyboard.rules
 sudo udevadm control --reload-rules
 ```
@@ -102,6 +128,19 @@ echo "blacklist ehub" | sudo tee /etc/modprobe.d/blacklist-ehub.conf
 Then install your working module as shown above.
 
 ## Uninstallation
+
+### DKMS Uninstallation
+
+```bash
+sudo rmmod ehub
+sudo dkms remove -m ehub -v 1.0.0 --all
+sudo rm -rf /usr/src/ehub-1.0.0
+sudo rm /etc/modules-load.d/ehub.conf
+sudo rm /etc/udev/rules.d/99-fl6000-keyboard.rules
+sudo udevadm control --reload-rules
+```
+
+### Manual Installation Uninstallation
 
 ```bash
 sudo rmmod ehub
