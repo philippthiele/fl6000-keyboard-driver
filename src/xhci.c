@@ -29,6 +29,7 @@
 #include <linux/slab.h>
 #include <linux/dmi.h>
 #include <linux/dma-mapping.h>
+#include <linux/timer.h>
 
 #include "xhci.h"
 #include "ehub-xhci-trace.h"
@@ -232,7 +233,7 @@ static void compliance_mode_recovery(struct timer_list *t)
 	u32 temp;
 	int i;
 
-	xhci = from_timer(xhci, t, comp_mode_recovery_timer);
+	xhci = container_of(t, struct xhci_hcd, comp_mode_recovery_timer);
 
 	for (i = 0; i < xhci->num_usb3_ports; i++) {
 		temp = xhci_readl( xhci, xhci->usb3_ports[i]);
@@ -518,7 +519,7 @@ void ehub_xhci_stop(struct usb_hcd *hcd)
 	/* Deleting Compliance Mode Recovery Timer */
 	if ((xhci->quirks & XHCI_COMP_MODE_QUIRK) &&
 			(!(xhci_all_ports_seen_u0(xhci)))) {
-		del_timer_sync(&xhci->comp_mode_recovery_timer);
+		timer_delete_sync(&xhci->comp_mode_recovery_timer);
 		ehub_xhci_dbg_trace(xhci, trace_ehub_xhci_dbg_quirks,
 				"%s: compliance mode recovery timer deleted",
 				__func__);
@@ -717,9 +718,9 @@ int ehub_xhci_suspend(struct xhci_hcd *xhci, bool do_wakeup)
 	/* Don't poll the roothubs on bus suspend. */
 	xhci_dbg(xhci, "%s: stopping port polling.\n", __func__);
 	clear_bit(HCD_FLAG_POLL_RH, &hcd->flags);
-	del_timer_sync(&hcd->rh_timer);
+	timer_delete_sync(&hcd->rh_timer);
 	clear_bit(HCD_FLAG_POLL_RH, &xhci->shared_hcd->flags);
-	del_timer_sync(&xhci->shared_hcd->rh_timer);
+	timer_delete_sync(&xhci->shared_hcd->rh_timer);
 
 	xhci_reg_lock_irq(xhci);
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
@@ -772,7 +773,7 @@ int ehub_xhci_suspend(struct xhci_hcd *xhci, bool do_wakeup)
 	 */
 	if ((xhci->quirks & XHCI_COMP_MODE_QUIRK) &&
 			(!(xhci_all_ports_seen_u0(xhci)))) {
-		del_timer_sync(&xhci->comp_mode_recovery_timer);
+		timer_delete_sync(&xhci->comp_mode_recovery_timer);
 		ehub_xhci_dbg_trace(xhci, trace_ehub_xhci_dbg_quirks,
 				"%s: compliance mode recovery timer deleted",
 				__func__);
@@ -835,7 +836,7 @@ int ehub_xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 
 		if ((xhci->quirks & XHCI_COMP_MODE_QUIRK) &&
 				!(xhci_all_ports_seen_u0(xhci))) {
-			del_timer_sync(&xhci->comp_mode_recovery_timer);
+			timer_delete_sync(&xhci->comp_mode_recovery_timer);
 			ehub_xhci_dbg_trace(xhci, trace_ehub_xhci_dbg_quirks,
 				"Compliance Mode Recovery Timer deleted!");
 		}
@@ -3447,7 +3448,7 @@ void ehub_xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	/* Stop any wayward timer functions (which may grab the lock) */
 	for (i = 0; i < 31; ++i) {
 		virt_dev->eps[i].ep_state &= ~EP_HALT_PENDING;
-		del_timer_sync(&virt_dev->eps[i].stop_cmd_timer);
+		timer_delete_sync(&virt_dev->eps[i].stop_cmd_timer);
 	}
 
 	ehub_xhci_reg_lock_irqsave( xhci, flags );

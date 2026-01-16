@@ -82,13 +82,9 @@ MESSAGE_HandleMessage_EMBEDDED_MEMORY_READ_COMPLETION(
 
 	memcpy(urbContext->DataBuffer, ( u8* )embeddedMemoryTransfer, sizeof(EMBEDDED_MEMORY_COMMAND));
 
-	status = copy_from_kernel_nofault(urbContext->DataBuffer + sizeof(EMBEDDED_MEMORY_COMMAND),
-							   addressTarget,
-							   embeddedMemoryTransfer->EmbeddedMemoryCommand.Length);
-	if (status < 0) {
-		dev_info(dev_ctx_to_dev(DeviceContext), "copy_from_kernel_nofault returned %d\n", status);
-		goto Exit;
-	}
+	memcpy(urbContext->DataBuffer + sizeof(EMBEDDED_MEMORY_COMMAND),
+		   addressTarget,
+		   embeddedMemoryTransfer->EmbeddedMemoryCommand.Length);
 
 	status = URB_Submit( urbContext );
 	if (status < 0)
@@ -210,12 +206,7 @@ MESSAGE_HandleMessage_EMBEDDED_MEMORY_WRITE_COMPLETION(
 		return;
 	}
 
-	status = copy_to_kernel_nofault(addressTarget,
-								addressSource,
-								length);
-	if (status < 0) {
-		dev_err(dev_ctx_to_dev(DeviceContext), "ERROR: copy_to_kernel_nofault returned %d\n", status);
-	}
+	memcpy(addressTarget, addressSource, length);
 
 	dev_dbg(dev_ctx_to_dev(DeviceContext), "0x%0X bytes @0x%p\n", length, addressSource );
 

@@ -11,7 +11,7 @@ The FL6000 chip acts as a USB bridge between the tablet and the detachable keybo
 
 ## Requirements
 
-- Linux kernel 6.x (tested on 6.14)
+- Linux kernel 6.x (tested on 6.17)
 - Kernel headers installed
 - Build tools (gcc, make)
 
@@ -175,6 +175,48 @@ If versions don't match, rebuild the driver.
 ### DMA Errors
 
 If you see DMA-related warnings, ensure the driver is the patched version with proper sysdev support for DMA operations.
+
+### Keyboard Keys Output Numbers Instead of Letters (NumLock Issue)
+
+The ITE keyboard (VID:06CB PID:7BA3) connected via the FL6000 defaults to NumLock ON. This causes certain keys to output numbers instead of their normal characters (e.g., U=4, I=5, O=6, J=1, K=2, L=3).
+
+**Quick fix** (temporary, until reboot):
+```bash
+# Find and disable NumLock on the ITE keyboard
+for led in /sys/class/leds/input*::numlock; do
+    input_num=$(basename "$led" | cut -d: -f1)
+    input_name=$(cat "/sys/class/input/$input_num/name" 2>/dev/null)
+    if echo "$input_name" | grep -qi "ITE"; then
+        echo 0 | sudo tee "$led/brightness" > /dev/null
+    fi
+done
+```
+
+**Permanent fix** (auto-disable NumLock on keyboard connect):
+
+1. Create the script `/usr/local/bin/fl6000-numlock-off.sh`:
+```bash
+sudo tee /usr/local/bin/fl6000-numlock-off.sh > /dev/null << 'EOF'
+#!/bin/bash
+sleep 1
+for led in /sys/class/leds/input*::numlock; do
+    if [ -f "$led/brightness" ]; then
+        input_num=$(basename "$led" | cut -d: -f1)
+        input_name=$(cat "/sys/class/input/$input_num/name" 2>/dev/null)
+        if echo "$input_name" | grep -qi "ITE"; then
+            echo 0 > "$led/brightness" 2>/dev/null
+        fi
+    fi
+done
+EOF
+sudo chmod +x /usr/local/bin/fl6000-numlock-off.sh
+```
+
+2. Create a udev rule `/etc/udev/rules.d/99-fl6000-numlock.rules`:
+```bash
+echo 'ACTION=="add", SUBSYSTEM=="input", ATTRS{idVendor}=="06cb", ATTRS{idProduct}=="7ba3", RUN+="/usr/local/bin/fl6000-numlock-off.sh"' | sudo tee /etc/udev/rules.d/99-fl6000-numlock.rules
+sudo udevadm control --reload-rules
+```
 
 ## Technical Details
 

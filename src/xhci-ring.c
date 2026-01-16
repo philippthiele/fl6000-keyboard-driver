@@ -675,11 +675,11 @@ static void xhci_stop_watchdog_timer_in_irq(struct xhci_hcd *xhci,
 		struct xhci_virt_ep *ep)
 {
 	ep->ep_state &= ~EP_HALT_PENDING;
-	/* Can't del_timer_sync in interrupt, so we attempt to cancel.  If the
+	/* Can't timer_delete_sync in interrupt, so we attempt to cancel.  If the
 	 * timer is running on another CPU, we don't decrement stop_cmds_pending
 	 * (since we didn't successfully stop the watchdog timer).
 	 */
-	if (del_timer(&ep->stop_cmd_timer))
+	if (timer_delete(&ep->stop_cmd_timer))
 		ep->stop_cmds_pending--;
 }
 
@@ -924,7 +924,7 @@ void ehub_xhci_stop_endpoint_command_watchdog(struct timer_list *t)
 	int i, j;
 	unsigned long flags = 0;
 
-	ep = from_timer(ep, t, stop_cmd_timer);
+	ep = container_of(t, struct xhci_virt_ep, stop_cmd_timer);
 	xhci = ep->xhci;
 
 	ehub_xhci_spin_lock_irqsave( xhci, flags );
@@ -1345,7 +1345,7 @@ void ehub_xhci_handle_command_timeout(struct timer_list *t)
 	int ret;
 	unsigned long flags;
 	struct xhci_command *cur_cmd = NULL;
-	xhci = from_timer(xhci, t, cmd_timer);
+	xhci = container_of(t, struct xhci_hcd, cmd_timer);
 
 	/* mark this command to be cancelled */
 	ehub_xhci_spin_lock_irqsave( xhci, flags );
@@ -1417,7 +1417,7 @@ static void handle_cmd_completion(struct xhci_hcd *xhci,
 		return;
 	}
 
-	del_timer(&xhci->cmd_timer);
+	timer_delete(&xhci->cmd_timer);
 
 	trace_ehub_xhci_cmd_completion(cmd_trb, (struct xhci_generic_trb *) event);
 
